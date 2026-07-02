@@ -38,6 +38,7 @@ WEATHER_MCP_SERVER = Path(__file__).parent / "weather_mcp_server.py"
 SKILL_PATHS = [
     str(Path(__file__).parent / "skills" / "shuyixin-openapi"),
     str(Path(__file__).parent / "skills" / "zhipu-web-search"),
+    str(Path(__file__).parent / "skills" / "tavily-web-search"),
 ]
 
 
@@ -238,7 +239,7 @@ async def demo_skill_query(workspace: LocalWorkspace) -> None:
     async for evt in agent.reply_stream(
         UserMsg(
             "Tony",
-            "用 shuyixin-openapi skill 查一下'百度在线网络技术（北京）有限公司'"
+            "用 tavily-web-search skill 查一下'百度在线网络技术（北京）有限公司'"
             "的工商信息，给我一个简短摘要：企业名称、法定代表人、注册资本、经营状态。",
         )
     ):
@@ -300,11 +301,11 @@ async def main() -> None:
     )
 
     try:
-        await demo_lifecycle_and_list(workspace)
+        #await demo_lifecycle_and_list(workspace)
 
-        await demo_offload(workspace)
+        #await demo_offload(workspace)
 
-        await demo_agent_integration(workspace)
+        #await demo_agent_integration(workspace)
 
         await demo_skill_query(workspace)
 
