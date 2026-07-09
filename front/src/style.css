@@ -1,0 +1,240 @@
+:root {
+  --bg: #f3f6fb;
+  --panel: #ffffff;
+  --border: #dbe3f0;
+  --text: #1f2937;
+  --muted: #64748b;
+  --primary: #2563eb;
+  --primary-hover: #1d4ed8;
+  --user-bg: #dbeafe;
+  --assistant-bg: #ffffff;
+  --thinking-bg: #f8fafc;
+  --tool-bg: #fff7ed;
+  --tool-result-bg: #f0fdf4;
+  --error: #dc2626;
+  --shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  background: linear-gradient(180deg, #eef4ff 0%, var(--bg) 40%);
+  color: var(--text);
+}
+
+.app {
+  max-width: 960px;
+  margin: 0 auto;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  padding: 20px;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.header h1 {
+  margin: 0 0 4px;
+  font-size: 24px;
+}
+
+.subtitle {
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.status {
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  font-size: 13px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.status.running {
+  color: var(--primary);
+  border-color: #93c5fd;
+  background: #eff6ff;
+}
+
+.status.error {
+  color: var(--error);
+  border-color: #fecaca;
+  background: #fef2f2;
+}
+
+.chat {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  box-shadow: var(--shadow);
+  min-height: 420px;
+}
+
+.message {
+  max-width: 88%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.message.user {
+  align-self: flex-end;
+}
+
+.message.assistant {
+  align-self: flex-start;
+}
+
+.bubble {
+  padding: 14px 16px;
+  border-radius: 16px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.message.user .bubble {
+  background: var(--user-bg);
+  border-bottom-right-radius: 6px;
+}
+
+.message.assistant .bubble {
+  background: var(--assistant-bg);
+  border: 1px solid var(--border);
+  border-bottom-left-radius: 6px;
+}
+
+.meta,
+.usage {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.block {
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin-top: 8px;
+}
+
+.block-thinking {
+  background: var(--thinking-bg);
+  border: 1px dashed #cbd5e1;
+}
+
+.block-text {
+  background: transparent;
+  padding: 0;
+  margin-top: 0;
+}
+
+.block-tool-call {
+  background: var(--tool-bg);
+  border: 1px solid #fed7aa;
+  font-size: 13px;
+}
+
+.block-tool-result {
+  background: var(--tool-result-bg);
+  border: 1px solid #bbf7d0;
+  font-size: 13px;
+}
+
+.block-title {
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.block-body {
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 12px;
+}
+
+details.thinking summary {
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 13px;
+  user-select: none;
+}
+
+.composer {
+  margin-top: 16px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 14px;
+  box-shadow: var(--shadow);
+}
+
+.composer textarea {
+  width: 100%;
+  resize: vertical;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 14px;
+  font: inherit;
+  outline: none;
+}
+
+.composer textarea:focus {
+  border-color: #93c5fd;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+.composer-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+button {
+  border: none;
+  border-radius: 10px;
+  padding: 10px 18px;
+  font: inherit;
+  cursor: pointer;
+  background: var(--primary);
+  color: white;
+}
+
+button:hover {
+  background: var(--primary-hover);
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+button.secondary {
+  background: #e2e8f0;
+  color: var(--text);
+}
+
+.empty {
+  margin: auto;
+  text-align: center;
+  color: var(--muted);
+  line-height: 1.8;
+}

@@ -95,7 +95,7 @@ async def demo_agent_via_manager(manager: LocalWorkspaceManager) -> None:
     )
 
     async for evt in agent.reply_stream(
-        UserMsg("Tony", "用 tavily-web-search skill 搜一下 2025 年最新的 AI 大模型进展，给我一个简短中文摘要。")
+        UserMsg("Tony", "大海为什么是蓝色的？")
     ):
         match evt.type:
             case EventType.THINKING_BLOCK_DELTA:
