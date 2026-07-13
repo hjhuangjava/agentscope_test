@@ -1,5 +1,5 @@
 import type { Msg } from "@agentscope-ai/agentscope/message";
-import { formatToolOutput, getTextContent, getThinkingContent } from "../message/rebuild";
+import { getTextContent, getThinkingContent, formatToolOutput } from "../message/rebuild";
 
 function escapeHtml(text: string): string {
   return text
@@ -14,6 +14,17 @@ export function renderUserBubble(question: string): HTMLElement {
   wrapper.innerHTML = `
     <div class="meta">user</div>
     <div class="bubble">${escapeHtml(question)}</div>
+  `;
+  return wrapper;
+}
+
+export function renderWorkflowBubble(node: string, msg: Msg): HTMLElement {
+  const wrapper = document.createElement("article");
+  wrapper.className = `message workflow ${msg.role}`;
+  const content = getTextContent(msg) ?? "";
+  wrapper.innerHTML = `
+    <div class="meta">workflow · ${escapeHtml(node)} · ${escapeHtml(msg.role)}</div>
+    <div class="bubble">${escapeHtml(content)}</div>
   `;
   return wrapper;
 }

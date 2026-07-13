@@ -105,6 +105,27 @@ body {
   align-self: flex-start;
 }
 
+.message.workflow {
+  align-self: center;
+  max-width: 96%;
+}
+
+.message.workflow .bubble {
+  background: #f8fafc;
+  border: 1px dashed #cbd5e1;
+  font-size: 13px;
+  color: #475569;
+}
+
+.message.workflow.user .bubble {
+  background: #eff6ff;
+  border-color: #93c5fd;
+}
+
+.message.workflow.system .bubble {
+  background: #f8fafc;
+}
+
 .bubble {
   padding: 14px 16px;
   border-radius: 16px;

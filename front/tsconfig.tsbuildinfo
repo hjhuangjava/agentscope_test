@@ -1,1 +1,1 @@
-{"root":["./src/main.ts","./src/api/chatstream.ts","./src/message/rebuild.ts","./src/ui/render.ts"],"version":"5.9.3"}
+{"root":["./src/agentdemo.ts","./src/main.ts","./src/api/chatstream.ts","./src/message/rebuild.ts","./src/ui/render.ts"],"version":"5.9.3"}

@@ -1,6 +1,13 @@
-import { streamChatEvents, isAgentEvent } from "./api/chatStream";
+import {
+  streamWorkflowEvents,
+  isAgentEvent,
+  isWorkflowMsgEvent,
+  isWorkflowDone,
+  isWorkflowError,
+  isWorkflowStart,
+} from "./api/chatStream";
 import { applyEvent } from "./message/rebuild";
-import { renderAssistantBubble, renderUserBubble, replaceNode } from "./ui/render";
+import { renderAssistantBubble, renderWorkflowBubble, replaceNode } from "./ui/render";
 import type { Msg } from "@agentscope-ai/agentscope/message";
 import "./style.css";
 
@@ -18,8 +25,8 @@ function createAppShell(): {
     <div class="app">
       <header class="header">
         <div>
-          <h1>AgentScope Chat</h1>
-          <p class="subtitle">前后端分离 · TypeScript · appendEvent 重建 Message</p>
+          <h1>AgentScope Workflow</h1>
+          <p class="subtitle">LangGraph 节点状态 · WORKFLOW_MSG + appendEvent 重建 Agent 回复</p>
         </div>
         <div class="status" id="status">就绪</div>
       </header>
@@ -54,7 +61,7 @@ function ensureEmptyHint(chatEl: HTMLElement): void {
   empty.className = "empty";
   empty.id = "emptyHint";
   empty.textContent =
-    "发送一个问题。前端会通过 @agentscope-ai/agentscope 的 appendEvent 从 SSE 事件流重建 assistant Msg。";
+    "发送一个问题。workflow 节点消息以 WORKFLOW_MSG 展示，Agent 回复通过 appendEvent 从事件流重建。";
   chatEl.appendChild(empty);
 }
 
@@ -76,41 +83,43 @@ async function main(): Promise<void> {
     running = true;
     sendBtn.disabled = true;
     abortController = new AbortController();
-    setStatus(statusEl, "Agent 思考中...", "running");
+    setStatus(statusEl, "Workflow 执行中...", "running");
     removeEmptyHint();
-
-    chatEl.appendChild(renderUserBubble(question));
     questionEl.value = "";
 
     let assistantMsg: Msg | null = null;
-    let assistantNode = renderAssistantBubble({
-      id: "pending",
-      name: "assistant",
-      role: "assistant",
-      content: [],
-      metadata: {},
-      created_at: new Date().toISOString(),
-    });
-    chatEl.appendChild(assistantNode);
-    chatEl.scrollTop = chatEl.scrollHeight;
+    let assistantNode: HTMLElement | null = null;
 
     try {
-      for await (const payload of streamChatEvents({ question }, abortController.signal)) {
-        if (payload.type === "WORKFLOW_START") continue;
-        if (payload.type === "WORKFLOW_DONE") {
+      for await (const payload of streamWorkflowEvents({ question }, abortController.signal)) {
+        if (isWorkflowStart(payload)) {
+          setStatus(statusEl, "Workflow 已启动...", "running");
+          continue;
+        }
+        if (isWorkflowDone(payload)) {
           setStatus(statusEl, "完成");
           continue;
         }
-        if (payload.type === "ERROR") {
+        if (isWorkflowError(payload)) {
           throw new Error(payload.detail);
+        }
+        if (isWorkflowMsgEvent(payload)) {
+          chatEl.appendChild(renderWorkflowBubble(payload.node, payload.message));
+          chatEl.scrollTop = chatEl.scrollHeight;
+          continue;
         }
         if (!isAgentEvent(payload)) continue;
 
         assistantMsg = applyEvent(assistantMsg, payload);
-        if (assistantMsg) {
+        if (!assistantMsg) continue;
+
+        if (!assistantNode) {
+          assistantNode = renderAssistantBubble(assistantMsg);
+          chatEl.appendChild(assistantNode);
+        } else {
           assistantNode = replaceNode(assistantNode, renderAssistantBubble(assistantMsg));
-          chatEl.scrollTop = chatEl.scrollHeight;
         }
+        chatEl.scrollTop = chatEl.scrollHeight;
       }
       if (!assistantMsg?.finished_at) {
         setStatus(statusEl, "完成");
@@ -118,8 +127,7 @@ async function main(): Promise<void> {
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       setStatus(statusEl, `错误: ${message}`, "error");
-      assistantNode = replaceNode(
-        assistantNode,
+      chatEl.appendChild(
         renderAssistantBubble({
           id: "error",
           name: "assistant",
