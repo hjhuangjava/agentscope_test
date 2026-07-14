@@ -115,7 +115,7 @@ async def workflow_chat_stream(req: ChatRequest) -> StreamingResponse:
                         yield workflow_msg(data["node"], data["message"])
                     elif "type" in data:
                         yield agent_event(data)
-                # updates 模式暂不推送到前端，避免噪音。
+                # updates 模式暂不推送到前端，避免噪音
         except Exception as exc:
             yield workflow_error(str(exc))
             return
