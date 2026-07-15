@@ -20,6 +20,19 @@
 - ChatService.run 每次对话用 custom_agent_cls 组装 Agent
 - SSE / 持久化 / 中间件由 AgentScope 服务层接管
 - 业务推理在 LangGraphAgent._reply_impl → LangGraph
+
+
+✅ SSE 事件流（回放 + 实时 + 心跳），前端零改造
+✅ Session / Agent / 消息的持久化
+✅ 多租户、凭证管理
+✅ 中间件系统（RAG、长期记忆、TTS、权限等钩子照常触发）
+✅ 分布式锁、并发序列化
+✅ HITL 人机协同
+放弃（LangGraph 侧被绕过的能力）：
+
+❌ LangGraph 的流式 astream_events 不会自动映射为 AgentScope 事件——需要你在 _reply 中手动 yield 对应的 AgentEvent
+❌ LangGraph Studio / LangSmith 的可视化追踪（除非你额外接入）
+❌ LangGraph 的 checkpoint 持久化（AgentScope 用自己的 Storage 管理 state）。你基于这个帮我写一个langgraph和agentscope结合的样例。
 """
 
 from __future__ import annotations
