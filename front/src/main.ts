@@ -1,15 +1,51 @@
 import {
-  streamWorkflowEvents,
+  streamBridgeChatEvents,
   isAgentEvent,
-  isWorkflowMsgEvent,
-  isWorkflowDone,
-  isWorkflowError,
-  isWorkflowStart,
 } from "./api/chatStream";
-import { applyEvent } from "./message/rebuild";
-import { renderAssistantBubble, renderWorkflowBubble, replaceNode } from "./ui/render";
-import type { Msg } from "@agentscope-ai/agentscope/message";
+import {
+  renderAssistantBubble,
+  renderUserBubble,
+  renderWorkflowNodeBubble,
+  replaceNode,
+} from "./ui/render";
+import { AssistantMsg, appendEvent, type Msg } from "@agentscope-ai/agentscope/message";
+import { EventType, type AgentEvent } from "@agentscope-ai/agentscope/event";
+import { resetBridgeBootstrap } from "./api/bridgeClient";
 import "./style.css";
+
+function applyAgentEvent(msg: Msg | null, event: AgentEvent): Msg | null {
+  if (event.type === EventType.REPLY_START) {
+    return AssistantMsg({
+      name: event.name,
+      content: [],
+      id: event.reply_id,
+    });
+  }
+  if (!msg) return null;
+  return appendEvent(msg, event);
+}
+
+function parseWorkflowHint(event: AgentEvent): { node: string; detail: string } | null {
+  if (event.type !== EventType.HINT_BLOCK) return null;
+  const hintEvent = event as AgentEvent & { hint?: string; source?: string | null };
+  let node = "workflow";
+  let detail = typeof hintEvent.hint === "string" ? hintEvent.hint : "[workflow node]";
+  try {
+    if (hintEvent.source) {
+      const meta = JSON.parse(hintEvent.source) as {
+        kind?: string;
+        node?: string;
+        detail?: string;
+      };
+      if (meta.kind !== "workflow_node") return null;
+      if (meta.node) node = meta.node;
+      if (meta.detail) detail = meta.detail;
+    }
+  } catch {
+    /* keep defaults */
+  }
+  return { node, detail };
+}
 
 function createAppShell(): {
   statusEl: HTMLElement;
@@ -17,6 +53,7 @@ function createAppShell(): {
   questionEl: HTMLTextAreaElement;
   sendBtn: HTMLButtonElement;
   clearBtn: HTMLButtonElement;
+  resetBtn: HTMLButtonElement;
 } {
   const root = document.querySelector<HTMLElement>("#app");
   if (!root) throw new Error("#app not found");
@@ -25,8 +62,8 @@ function createAppShell(): {
     <div class="app">
       <header class="header">
         <div>
-          <h1>AgentScope Workflow</h1>
-          <p class="subtitle">LangGraph 节点状态 · WORKFLOW_MSG + appendEvent 重建 Agent 回复</p>
+          <h1>LangGraph × AgentScope Bridge</h1>
+          <p class="subtitle">:8000 · HintBlock 节点进度 + appendEvent 重建回复</p>
         </div>
         <div class="status" id="status">就绪</div>
       </header>
@@ -36,6 +73,7 @@ function createAppShell(): {
         <div class="composer-actions">
           <button id="sendBtn" type="button">发送</button>
           <button id="clearBtn" type="button" class="secondary">清空</button>
+          <button id="resetBtn" type="button" class="secondary">重置会话</button>
         </div>
       </footer>
     </div>
@@ -47,6 +85,7 @@ function createAppShell(): {
     questionEl: root.querySelector("#question") as HTMLTextAreaElement,
     sendBtn: root.querySelector("#sendBtn") as HTMLButtonElement,
     clearBtn: root.querySelector("#clearBtn") as HTMLButtonElement,
+    resetBtn: root.querySelector("#resetBtn") as HTMLButtonElement,
   };
 }
 
@@ -61,7 +100,7 @@ function ensureEmptyHint(chatEl: HTMLElement): void {
   empty.className = "empty";
   empty.id = "emptyHint";
   empty.textContent =
-    "发送一个问题。workflow 节点消息以 WORKFLOW_MSG 展示，Agent 回复通过 appendEvent 从事件流重建。";
+    "发送问题。LangGraph 节点会以 workflow 气泡显示（HintBlock），Agent 回复通过 appendEvent 重建。";
   chatEl.appendChild(empty);
 }
 
@@ -70,7 +109,7 @@ function removeEmptyHint(): void {
 }
 
 async function main(): Promise<void> {
-  const { statusEl, chatEl, questionEl, sendBtn, clearBtn } = createAppShell();
+  const { statusEl, chatEl, questionEl, sendBtn, clearBtn, resetBtn } = createAppShell();
   let running = false;
   let abortController: AbortController | null = null;
 
@@ -83,35 +122,36 @@ async function main(): Promise<void> {
     running = true;
     sendBtn.disabled = true;
     abortController = new AbortController();
-    setStatus(statusEl, "Workflow 执行中...", "running");
+    setStatus(statusEl, "连接 SSE / 触发对话...", "running");
     removeEmptyHint();
     questionEl.value = "";
+
+    chatEl.appendChild(renderUserBubble(question));
 
     let assistantMsg: Msg | null = null;
     let assistantNode: HTMLElement | null = null;
 
     try {
-      for await (const payload of streamWorkflowEvents({ question }, abortController.signal)) {
-        if (isWorkflowStart(payload)) {
-          setStatus(statusEl, "Workflow 已启动...", "running");
-          continue;
-        }
-        if (isWorkflowDone(payload)) {
-          setStatus(statusEl, "完成");
-          continue;
-        }
-        if (isWorkflowError(payload)) {
-          throw new Error(payload.detail);
-        }
-        if (isWorkflowMsgEvent(payload)) {
-          chatEl.appendChild(renderWorkflowBubble(payload.node, payload.message));
-          chatEl.scrollTop = chatEl.scrollHeight;
-          continue;
-        }
+      for await (const payload of streamBridgeChatEvents({ question }, abortController.signal)) {
         if (!isAgentEvent(payload)) continue;
 
-        assistantMsg = applyEvent(assistantMsg, payload);
+        const workflowHint = parseWorkflowHint(payload);
+        if (workflowHint) {
+          chatEl.appendChild(
+            renderWorkflowNodeBubble(workflowHint.node, workflowHint.detail),
+          );
+          setStatus(statusEl, `节点 ${workflowHint.node}...`, "running");
+          chatEl.scrollTop = chatEl.scrollHeight;
+        }
+
+        assistantMsg = applyAgentEvent(assistantMsg, payload);
         if (!assistantMsg) continue;
+
+        if (payload.type === EventType.REPLY_END || assistantMsg.finished_at) {
+          setStatus(statusEl, "完成");
+        } else if (!workflowHint) {
+          setStatus(statusEl, "生成中...", "running");
+        }
 
         if (!assistantNode) {
           assistantNode = renderAssistantBubble(assistantMsg);
@@ -121,9 +161,7 @@ async function main(): Promise<void> {
         }
         chatEl.scrollTop = chatEl.scrollHeight;
       }
-      if (!assistantMsg?.finished_at) {
-        setStatus(statusEl, "完成");
-      }
+      setStatus(statusEl, "完成");
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       setStatus(statusEl, `错误: ${message}`, "error");
@@ -152,6 +190,10 @@ async function main(): Promise<void> {
     chatEl.innerHTML = "";
     ensureEmptyHint(chatEl);
     setStatus(statusEl, "就绪");
+  });
+  resetBtn.addEventListener("click", () => {
+    resetBridgeBootstrap();
+    setStatus(statusEl, "已重置 bootstrap，下次发送将重新创建 agent/session");
   });
   questionEl.addEventListener("keydown", (event) => {
     if (event.key === "Enter" && !event.shiftKey) {

@@ -180,6 +180,13 @@ body {
   font-size: 13px;
 }
 
+.block-hint {
+  background: #f8fafc;
+  border: 1px dashed #cbd5e1;
+  font-size: 13px;
+  color: #475569;
+}
+
 .block-title {
   font-weight: 600;
   margin-bottom: 8px;

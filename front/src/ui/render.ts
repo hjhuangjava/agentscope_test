@@ -29,6 +29,17 @@ export function renderWorkflowBubble(node: string, msg: Msg): HTMLElement {
   return wrapper;
 }
 
+/** LangGraph 节点进度（来自 HintBlockEvent） */
+export function renderWorkflowNodeBubble(node: string, detail: string): HTMLElement {
+  const wrapper = document.createElement("article");
+  wrapper.className = "message workflow system";
+  wrapper.innerHTML = `
+    <div class="meta">workflow · ${escapeHtml(node)}</div>
+    <div class="bubble">${escapeHtml(detail)}</div>
+  `;
+  return wrapper;
+}
+
 export function renderAssistantBubble(msg: Msg): HTMLElement {
   const wrapper = document.createElement("article");
   wrapper.className = "message assistant";
@@ -61,6 +72,33 @@ export function renderAssistantBubble(msg: Msg): HTMLElement {
       textEl.className = "block block-text";
       textEl.textContent = block.text;
       bubble.appendChild(textEl);
+    }
+
+    if (block.type === "hint") {
+      const hintText =
+        typeof block.hint === "string"
+          ? block.hint
+          : Array.isArray(block.hint)
+            ? block.hint.map((item) => ("text" in item ? item.text ?? "" : "")).join("")
+            : "";
+      if (hintText) {
+        const hintEl = document.createElement("div");
+        hintEl.className = "block block-hint";
+        let nodeLabel = "";
+        try {
+          if (block.source) {
+            const meta = JSON.parse(block.source) as { node?: string };
+            if (meta.node) nodeLabel = ` · ${meta.node}`;
+          }
+        } catch {
+          /* ignore */
+        }
+        hintEl.innerHTML = `
+          <div class="block-title">workflow${escapeHtml(nodeLabel)}</div>
+          <div class="block-body">${escapeHtml(hintText)}</div>
+        `;
+        bubble.appendChild(hintEl);
+      }
     }
 
     if (block.type === "tool_call") {

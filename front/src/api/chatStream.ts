@@ -1,5 +1,6 @@
 import type { AgentEvent } from "@agentscope-ai/agentscope/event";
 import type { Msg } from "@agentscope-ai/agentscope/message";
+import { streamBridgeChat } from "./bridgeClient";
 
 export interface ChatRequest {
   question: string;
@@ -95,7 +96,17 @@ export async function* streamAgentEvents(
   yield* readSseStream(response);
 }
 
-/** LangGraph workflow 接口 */
+/** LangGraph × AgentScope bridge（langgraph_bridge_app :8000） */
+export async function* streamBridgeChatEvents(
+  request: ChatRequest,
+  signal?: AbortSignal,
+): AsyncGenerator<StreamPayload> {
+  for await (const event of streamBridgeChat(request.question, signal)) {
+    yield event;
+  }
+}
+
+/** LangGraph workflow 接口（workflow_langgraph_app :8093，备用） */
 export async function* streamWorkflowEvents(
   request: ChatRequest,
   signal?: AbortSignal,

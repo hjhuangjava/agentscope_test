@@ -87,14 +87,17 @@ class LangGraphAgent(Agent):
         ):
             for node_name, patch in update.items():
                 accumulated.update(patch)
+                logs = patch.get("node_logs") or []
+                detail = logs[-1] if logs else f"{node_name} done"
                 yield HintBlockEvent(
                     reply_id=self.state.reply_id,
                     block_id=f"hint-{node_name}-{uuid4().hex[:8]}",
-                    hint=f"[workflow] {node_name} done",
+                    hint=f"[workflow · {node_name}] {detail}",
                     source=json.dumps(
                         {
                             "kind": "workflow_node",
                             "node": node_name,
+                            "detail": detail,
                             "keys": list(patch.keys()),
                         },
                         ensure_ascii=False,
